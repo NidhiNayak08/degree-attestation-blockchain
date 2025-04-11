@@ -14,13 +14,31 @@ contract DegreeContract {
 
     event DegreeIssued(bytes32 indexed degreeId, string studentName, string ipfsHash);
 
-    function issueDegree(string memory _studentName, string memory _ipfsHash, string memory _degreeName, string memory _issuedDate) public {
-        bytes32 degreeId = keccak256(abi.encodePacked(_studentName, _ipfsHash, _degreeName, _issuedDate, msg.sender));
+    function issueDegree(
+        string memory _studentName,
+        string memory _ipfsHash,
+        string memory _degreeName,
+        string memory _issuedDate
+    ) public returns (bytes32) {
+        bytes32 degreeId = keccak256(
+            abi.encodePacked(_studentName, _ipfsHash, _degreeName, _issuedDate, msg.sender)
+        );
+
         degrees[degreeId] = Degree(_studentName, _ipfsHash, _degreeName, _issuedDate, msg.sender);
+
         emit DegreeIssued(degreeId, _studentName, _ipfsHash);
+        return degreeId;
     }
 
-    function verifyDegree(bytes32 _degreeId) public view returns (Degree memory) {
-        return degrees[_degreeId];
+    function verifyDegree(bytes32 _degreeId) public view returns (
+        string memory studentName,
+        string memory ipfsHash,
+        string memory degreeName,
+        string memory issuedDate,
+        address university
+    ) {
+        Degree memory degree = degrees[_degreeId];
+        require(degree.university != address(0), "Degree not found");
+        return (degree.studentName, degree.ipfsHash, degree.degreeName, degree.issuedDate, degree.university);
     }
 }

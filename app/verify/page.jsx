@@ -6,87 +6,41 @@ import { DegreeABI } from "@/lib/contract";
 import { useWallet } from "../hooks/useWallet";
 
 export default function VerifyDegree() {
-  const [form, setForm] = useState({
-    studentName: "",
-    degreeName: "",
-    issuedDate: "",
-    ipfsHash: "",
-  });
+  const [degreeId, setDegreeId] = useState("");
   const [degreeData, setDegreeData] = useState(null);
   const { provider } = useWallet();
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
   const handleVerify = async () => {
-    if (!provider) {
-      alert("Please connect your wallet first.");
-      return;
-    }
+    if (!provider) return alert("Connect wallet");
+    if (!degreeId) return alert("Enter degree ID");
 
     try {
-      const userAddress = await provider
-        .getSigner()
-        .then((s) => s.getAddress());
-
-      const encoded = ethers.AbiCoder.defaultAbiCoder().encode(
-        ["string", "string", "string", "string", "address"],
-        [
-          form.studentName,
-          form.ipfsHash,
-          form.degreeName,
-          form.issuedDate,
-          userAddress,
-        ]
-      );
-
-      const degreeId = ethers.keccak256(encoded);
-      console.log("Generated Degree ID:", degreeId);
-
       const contract = new ethers.Contract(
         process.env.NEXT_PUBLIC_CONTRACT_ADDRESS,
         DegreeABI,
         provider
       );
 
-      const degree = await contract.verifyDegree(degreeId);
-
-      if (!degree.studentName) {
-        alert("Degree not found.");
-      } else {
-        setDegreeData(degree);
-      }
-    } catch (error) {
-      console.error("Error verifying degree:", error);
-      alert("Failed to verify degree.");
+      const data = await contract.verifyDegree(degreeId);
+      setDegreeData({
+        studentName: data[0],
+        ipfsHash: data[1],
+        degreeName: data[2],
+        issuedDate: data[3],
+        university: data[4],
+      });
+    } catch (err) {
+      console.error(err);
+      alert("Verification failed or degree not found");
     }
   };
 
   return (
     <div className="p-6 space-y-4">
       <input
-        name="studentName"
-        placeholder="Student Name"
-        onChange={handleChange}
-        className="border p-2 w-full"
-      />
-      <input
-        name="degreeName"
-        placeholder="Degree Name"
-        onChange={handleChange}
-        className="border p-2 w-full"
-      />
-      <input
-        name="issuedDate"
-        placeholder="Issued Date (YYYY-MM-DD)"
-        onChange={handleChange}
-        className="border p-2 w-full"
-      />
-      <input
-        name="ipfsHash"
-        placeholder="IPFS URL used during issuing"
-        onChange={handleChange}
+        value={degreeId}
+        onChange={(e) => setDegreeId(e.target.value)}
+        placeholder="Enter Degree ID"
         className="border p-2 w-full"
       />
       <button
@@ -99,13 +53,16 @@ export default function VerifyDegree() {
       {degreeData && (
         <div className="mt-4 border p-4 rounded bg-gray-50">
           <p>
-            <strong>Student Name:</strong> {degreeData.studentName}
+            <strong>Student:</strong> {degreeData.studentName}
           </p>
           <p>
-            <strong>Degree Name:</strong> {degreeData.degreeName}
+            <strong>Degree:</strong> {degreeData.degreeName}
           </p>
           <p>
-            <strong>Issued Date:</strong> {degreeData.issuedDate}
+            <strong>Issued:</strong> {degreeData.issuedDate}
+          </p>
+          <p>
+            <strong>University:</strong> {degreeData.university}
           </p>
           <a
             href={degreeData.ipfsHash}
